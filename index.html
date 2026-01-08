@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="theme-color" content="#111827" />
+  <title>Envelope Budget</title>
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
+  <style>
+    :root { font-family: -apple-system, system-ui, Segoe UI, Roboto, Arial, sans-serif; color: #111827; }
+    body { margin: 0; background:#f3f4f6; }
+    header { position: sticky; top: 0; background:#111827; color:white; padding: 14px 16px; }
+    header h1 { margin: 0; font-size: 16px; font-weight: 700; }
+    main { padding: 12px; max-width: 900px; margin: 0 auto; }
+    .row { display:flex; gap: 10px; flex-wrap: wrap; }
+    .card { background:white; border-radius: 16px; padding: 12px; box-shadow: 0 1px 8px rgba(0,0,0,.06); }
+    .card h2 { margin: 0 0 8px; font-size: 14px; }
+    .grow { flex: 1 1 340px; }
+    label { display:block; font-size: 12px; color:#374151; margin-top: 8px; }
+    input, select, button, textarea {
+      width: 100%; box-sizing: border-box; padding: 10px 10px;
+      border: 1px solid #d1d5db; border-radius: 12px; background: white;
+      font-size: 14px;
+    }
+    textarea{ resize: vertical; }
+    button { background:#111827; color:white; border:none; cursor:pointer; font-weight: 700; }
+    button.secondary { background:#e5e7eb; color:#111827; }
+    button.danger { background:#b91c1c; }
+    .grid { display:grid; grid-template-columns: 1.4fr .8fr .8fr; gap: 8px; align-items:center; }
+    .grid-head { font-size: 12px; color:#6b7280; font-weight: 700; }
+    .pill { display:inline-block; padding: 2px 10px; border-radius: 999px; background:#e5e7eb; font-size: 12px; }
+    .neg { color:#b91c1c; font-weight: 800; }
+    .pos { color:#047857; font-weight: 800; }
+    .muted { color:#6b7280; font-size: 12px; }
+    .split { display:flex; justify-content: space-between; align-items: center; gap: 8px; }
+    .mono { font-variant-numeric: tabular-nums; }
+    .list { display:flex; flex-direction: column; gap: 8px; }
+    .tx { border: 1px solid #e5e7eb; border-radius: 14px; padding: 10px; }
+    .tx .top { display:flex; justify-content: space-between; gap: 10px; }
+    .tx .top b { font-size: 14px; }
+    .tx small { color:#6b7280; }
+    .two { display:grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    @media (max-width: 560px) { .two { grid-template-columns: 1fr; } .grid { grid-template-columns: 1.2fr .9fr .9fr; } }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="split">
+      <h1>Envelope Budget</h1>
+      <span class="pill" id="statusPill">Offline-first</span>
+    </div>
+  </header>
+
+  <main>
+    <div class="row">
+      <section class="card grow">
+        <div class="split">
+          <h2>Month</h2>
+          <div class="muted">Balances roll over automatically</div>
+        </div>
+        <div class="two">
+          <div>
+            <label>Budget Start Month</label>
+            <input id="budgetStart" type="month" />
+          </div>
+          <div>
+            <label>Report Month</label>
+            <input id="reportMonth" type="month" />
+          </div>
+        </div>
+        <div class="two">
+          <div>
+            <label>Rollover</label>
+            <select id="rollover">
+              <option value="on">On (Goodbudget-style)</option>
+              <option value="off">Off (month-only)</option>
+            </select>
+          </div>
+          <div>
+            <label>Currency</label>
+            <select id="currency">
+              <option value="AUD">AUD</option>
+              <option value="USD">USD</option>
+              <option value="EUR">EUR</option>
+              <option value="GBP">GBP</option>
+            </select>
+          </div>
+        </div>
+        <div class="row" style="margin-top:10px;">
+          <button class="secondary" id="exportBtn" style="flex:1;">Export Backup (JSON)</button>
+          <button class="secondary" id="importBtn" style="flex:1;">Import Backup</button>
+          <input id="importFile" type="file" accept="application/json" style="display:none;" />
+        </div>
+      </section>
+
+      <section class="card grow">
+        <h2>Envelopes</h2>
+        <div class="grid grid-head">
+          <div>Envelope</div><div class="mono">Balance</div><div class="mono">Remaining</div>
+        </div>
+        <div id="envelopeList" class="list" style="margin-top:8px;"></div>
+
+        <hr style="border:none;border-top:1px solid #e5e7eb;margin:12px 0;" />
+
+        <h2>Add / Edit Envelope</h2>
+        <input type="hidden" id="envId" />
+        <label>Name</label>
+        <input id="envName" placeholder="Groceries" />
+        <div class="two">
+          <div>
+            <label>Monthly Add</label>
+            <input id="envMonthly" type="number" step="0.01" placeholder="600" />
+          </div>
+          <div>
+            <label>Starting Balance</label>
+            <input id="envStartBal" type="number" step="0.01" placeholder="0" />
+          </div>
+        </div>
+        <div class="two" style="margin-top:10px;">
+          <button id="saveEnvBtn">Save Envelope</button>
+          <button class="secondary" id="clearEnvBtn">Clear</button>
+        </div>
+        <p class="muted" style="margin:10px 0 0;">
+          Tip: Create a “To Be Budgeted” envelope (Monthly Add = 0) to receive income, then use Transfers to fund envelopes.
+        </p>
+      </section>
+    </div>
+
+    <div class="row" style="margin-top:12px;">
+      <section class="card grow">
+        <div class="split">
+          <h2>Transactions (Report Month)</h2>
+          <button class="secondary" id="clearTxnFormBtn" style="width:auto;">Clear</button>
+        </div>
+
+        <input type="hidden" id="txnId" />
+
+        <div class="two">
+          <div>
+            <label>Date</label>
+            <input id="txnDate" type="date" />
+          </div>
+          <div>
+            <label>Type</label>
+            <select id="txnType">
+              <option value="expense">Expense</option>
+              <option value="income">Income</option>
+              <option value="transfer">Transfer</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="txnExpenseIncomeFields">
+          <label>Envelope</label>
+          <select id="txnEnvelope"></select>
+        </div>
+
+        <div id="txnTransferFields" style="display:none;">
+          <div class="two">
+            <div>
+              <label>From Envelope</label>
+              <select id="txnFrom"></select>
+            </div>
+            <div>
+              <label>To Envelope</label>
+              <select id="txnTo"></select>
+            </div>
+          </div>
+        </div>
+
+        <div class="two">
+          <div>
+            <label>Amount</label>
+            <input id="txnAmount" type="number" step="0.01" placeholder="45.90" />
+          </div>
+          <div>
+            <label>Description</label>
+            <input id="txnDesc" placeholder="Woolworths" />
+          </div>
+        </div>
+
+        <div class="two" style="margin-top:10px;">
+          <button id="saveTxnBtn">Save Transaction</button>
+          <button class="danger" id="deleteTxnBtn" style="display:none;">Delete</button>
+        </div>
+
+        <hr style="border:none;border-top:1px solid #e5e7eb;margin:12px 0;" />
+
+        <div id="txnList" class="list"></div>
+      </section>
+    </div>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
